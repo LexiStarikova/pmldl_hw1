@@ -9,7 +9,13 @@ import os
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, parent_dir)
-from datasets.mnist_preprocessing import preprocess_dataset
+
+# Optional import for training functionality
+try:
+    from datasets.mnist_preprocessing import preprocess_dataset
+except ImportError:
+    # This import is only needed for training, not for model inference
+    preprocess_dataset = None
 
 
 class SimpleCNN(nn.Module):
@@ -68,6 +74,11 @@ class SimpleCNN(nn.Module):
 
 def train_model():
     """Train the CNN model on MNIST dataset"""
+
+    if preprocess_dataset is None:
+        raise ImportError(
+            "Training functionality requires the datasets module. This is only available during training, not in the API container."
+        )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")

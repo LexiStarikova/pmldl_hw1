@@ -19,9 +19,6 @@ COPY code/deployment/api/ .
 COPY models /app/models
 COPY code/models/train_model.py /app/models/
 
-# Debug: List files to verify they were copied
-RUN ls -la /app/models/
-
 # Expose port
 EXPOSE 8000
 
