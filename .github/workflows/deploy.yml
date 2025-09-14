@@ -65,7 +65,8 @@ jobs:
     - name: Build and push API image
       uses: docker/build-push-action@v5
       with:
-        context: ./code/deployment/api
+        context: .
+        file: ./code/deployment/api/Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta-api.outputs.tags }}
         labels: ${{ steps.meta-api.outputs.labels }}
@@ -89,6 +90,9 @@ jobs:
 
         echo "Waiting for API to start up (30 seconds)..."
         sleep 30
+
+        echo "Checking container logs..."
+        docker logs test-api
 
         echo "Checking API health..."
         for i in {1..5}; do

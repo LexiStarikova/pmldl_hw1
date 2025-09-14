@@ -15,9 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Copy model files and training code
+# Copy model files
 COPY ../../models /app/models
-COPY ../../train_model.py /app/models/
 
 # Expose port
 EXPOSE 8000
