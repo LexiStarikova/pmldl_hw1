@@ -9,14 +9,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
-COPY requirements.txt .
+COPY code/deployment/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY code/deployment/api/ .
 
-# Copy model files
-COPY ../../models /app/models
+# Copy model files and training code
+COPY models /app/models
+COPY code/models/train_model.py /app/models/
 
 # Expose port
 EXPOSE 8000
