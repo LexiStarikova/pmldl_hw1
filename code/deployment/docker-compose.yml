@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  api:
+    build: ./api
+    container_name: mnist_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../models:/app/models:ro
+    environment:
+      - PYTHONPATH=/app
+    networks:
+      - mnist_network
+    restart: unless-stopped
+
+  app:
+    build: ./app
+    container_name: mnist_app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    environment:
+      - API_URL=http://api:8000
+    networks:
+      - mnist_network
+    restart: unless-stopped
+
+networks:
+  mnist_network:
+    driver: bridge

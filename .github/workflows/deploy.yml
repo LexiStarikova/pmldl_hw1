@@ -1,0 +1,153 @@
+name: Build and Deploy MNIST Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_API: ${{ github.repository }}/mnist-api
+  IMAGE_NAME_APP: ${{ github.repository }}/mnist-app
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for API
+      id: meta-api
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Extract metadata for App
+      id: meta-app
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push API image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./code/deployment/api
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta-api.outputs.tags }}
+        labels: ${{ steps.meta-api.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push App image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./code/deployment/app
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta-app.outputs.tags }}
+        labels: ${{ steps.meta-app.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test API container
+      run: |
+        docker run --rm -d --name test-api -p 8000:8000 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest
+        sleep 10
+        curl -f http://localhost:8000/health || exit 1
+        docker stop test-api
+
+    - name: Test App container
+      run: |
+        docker run --rm -d --name test-app -p 8501:8501 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}:latest
+        sleep 10
+        curl -f http://localhost:8501 || exit 1
+        docker stop test-app
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Deploy to production
+      run: |
+        echo "Deploying MNIST Pipeline to production..."
+        echo "API Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest"
+        echo "App Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}:latest"
+        echo "Deployment completed successfully!"
+
+        # Add your deployment commands here
+        # Examples:
+        # - Deploy to cloud platforms (AWS ECS, Google Cloud Run, Azure Container Instances)
+        # - Update Kubernetes deployments
+        # - Notify deployment status via Slack/Teams
+        # - Run smoke tests against deployed services
+
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner on API
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest
+        format: 'sarif'
+        output: 'trivy-results-api.sarif'
+
+    - name: Run Trivy vulnerability scanner on App
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}:latest
+        format: 'sarif'
+        output: 'trivy-results-app.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results-api.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results-app.sarif'
