@@ -1,6 +1,6 @@
 # MNIST Digit Prediction Pipeline
 
-This project implements a pipeline for MNIST digit prediction using a CNN, FastAPI, and Streamlit.
+This project implements a pipeline for MNIST digit prediction using a custom CNN, FastAPI, and Streamlit.
 
 ## Project Structure
 

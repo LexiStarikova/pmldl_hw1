@@ -3,13 +3,14 @@ import requests
 import io
 import numpy as np
 import cv2
+import os
 from PIL import Image
 
 st.set_page_config(
     page_title="MNIST Digit Predictor", page_icon="numbers.png", layout="wide"
 )
 
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 
 def preprocess_drawing(image):

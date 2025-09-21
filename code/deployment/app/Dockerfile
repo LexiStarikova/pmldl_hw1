@@ -4,12 +4,14 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     gcc \
+    libglib2.0-0 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY code/deployment/app/requirements.txt .
 RUN pip install --no-cache-dir --timeout=1000 --retries=5 -r requirements.txt
 
-COPY . .
+COPY code/deployment/app/ .
 
 # Expose port
 EXPOSE 8501

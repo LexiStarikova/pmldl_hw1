@@ -15,7 +15,9 @@ services:
     restart: unless-stopped
 
   app:
-    build: ./app
+    build:
+      context: ../../
+      dockerfile: code/deployment/app/Dockerfile
     container_name: mnist_app
     ports:
       - "8501:8501"
